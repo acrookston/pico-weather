@@ -15,14 +15,17 @@ _level_dict = {
     WARNING: "WARNING",
     INFO: "INFO",
     DEBUG: "DEBUG",
+    NOTSET: "NOT SET",
 }
 
 class Logger:
+    name = None
     level = NOTSET
+    handlers = []
 
-    def __init__(self, name):
+    def __init__(self, name, level=NOTSET):
         self.name = name
-        self.handlers = None
+        self.level = level
 
     def _level_str(self, level):
         l = _level_dict.get(level)
@@ -81,43 +84,49 @@ class Handler:
     def setFormatter(self, fmt):
         self.formatter = fmt
 
+    def close(self):
+        pass
 
 class StreamHandler(Handler):
-    def __init__(self, stream=None):
+    def __init__(self, stream=None, level=NOTSET, formatter=None):
         self._stream = stream or sys.stderr
         self.terminator = "\n"
-        self.formatter = Formatter()
+        self.formatter = formatter
+        self.level = level
 
     def emit(self, record):
-        self._stream.write(self.formatter.format(record) + self.terminator)
+        if record.levelno >= self.level:
+            self._stream.write(self.formatter.format(record) + self.terminator)
 
     def flush(self):
         pass
 
-
 class FileHandler(Handler):
-    def __init__(self, filename, mode="a", encoding=None, delay=False):
+    def __init__(self, filename, mode="a", encoding=None, delay=False, level=NOTSET, formatter=None):
         super().__init__()
-
         self.encoding = encoding
         self.mode = mode
         self.delay = delay
         self.terminator = "\n"
         self.filename = filename
+        self.level = level
+        self.formatter = formatter
 
         self._f = None
         if not delay:
             self._f = open(self.filename, self.mode)
 
     def emit(self, record):
-        if self._f is None:
-            self._f = open(self.filename, self.mode)
+        if record.levelno >= self.level:
+            if self._f is None:
+                self._f = open(self.filename, self.mode)
 
-        self._f.write(self.formatter.format(record) + self.terminator)
+            self._f.write(self.formatter.format(record) + self.terminator)
 
     def close(self):
         if self._f is not None:
             self._f.close()
+            self._f = None
 
 
 class Formatter:

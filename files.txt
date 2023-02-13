@@ -3,6 +3,7 @@ esp8266.py
 font.py
 httpResponse.py
 logger.py
+logManager.py
 main.py
 runLoop.py
 removeNonAscii.py

@@ -3,9 +3,9 @@ from dht import DHT22
 from esp8266 import ESP8266, ESP8266Timeout
 from dateTimeParser import ISO8601StringParser
 from runLoop import RunLoop
-from logger import Logger, StreamHandler, FileHandler, Formatter
 from screen import Screen
-import time, sys
+from logManager import LogManager
+import time, sys, os, logger
 
 WIFI_SSID = ""
 WIFI_PASSWORD = ""
@@ -42,23 +42,13 @@ class Application:
     def __init__(self, location, sensorPin=2):
         self.location = location
         self.rtc = RTC()
-        self.logger = self.createLogger()
+        self.logManager = LogManager()
+        self.logger = self.logManager.logger
         #self.led = machine.Pin(25, Pin.OUT)
         self.sensor = DHT22(machine.Pin(sensorPin))
         self.esp01 = ESP8266(logger=self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.screen = Screen()
-        
-    def createLogger(self):
-        logger = Logger("stdout")
-        formatter = Formatter(style="{")
-        sh = StreamHandler(stream=sys.stdout)
-        sh.formatter = formatter
-        logger.addHandler(sh)
-        fh = FileHandler("application.log")
-        fh.formatter  = formatter
-        logger.addHandler(fh)
-        return logger
 
     def updateScreen(self):
         self.logger.info("updateScreen")
@@ -75,14 +65,17 @@ class Application:
             self.logger.exc(error, "Application exception")
             raise error
 
-
     def startRunLoop(self):
+        self.runLoop.add("logs", 60000, self.purgeLogFiles)
         self.runLoop.add("wifi", 15000, self.checkWifi)
         self.runLoop.add("weather", 15000, self.measureWeather)
         self.runLoop.add("ntp", 10000, self.updateTime)
         self.runLoop.add("display", 5000, self.updateScreen)
         self.runLoop.start()
         self.running = True
+
+    def purgeLogFiles(self):
+        self.logManager.purgeLogFiles()
 
     def checkWifi(self):
         status = self.esp01.wifiStatus()
