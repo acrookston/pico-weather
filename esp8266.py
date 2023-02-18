@@ -40,7 +40,7 @@ class ESP8266:
 
     executeAttempts = 0
 
-    def __init__(self, logger=None, uartPort=0, baudRate=115200, txPin=Pin(0), rxPin=Pin(1), timeout=10, wait=0.1):
+    def __init__(self, logger=None, uartPort=0, baudRate=115200, txPin=Pin(0), rxPin=Pin(1), timeout=5, wait=0.2):
         self.uartPort = uartPort
         self.baudRate = baudRate
         self.txPin = txPin
@@ -74,14 +74,12 @@ class ESP8266:
             if len(received) > 0:
                 try:
                     # replace generates less errors than .decode("utf-8")
-#                     incomingData = str(received)
-#                     incomingData = incomingData.replace("b'", "")
-#                     incomingData = incomingData.replace("\\r", "")
-#                     incomingData = incomingData.replace("\\n", "\n")
-#                     incomingData = incomingData.replace("'", "")
-
-                    incomingData = RemoveNonAscii(received).decode('utf8')
-                    incomingData = received.decode('utf8')
+                    incomingData = str(received)
+                    incomingData = incomingData.replace("b'", "")
+                    incomingData = incomingData.replace("\\r", "\r")
+                    incomingData = incomingData.replace("\\n", "\n")
+                    incomingData = incomingData.replace("'", "")
+                    incomingData = RemoveNonAscii(incomingData)
                     self.logger.debug("\n--\n{}\n--\n", incomingData)
                 except Exception as error:
                     self.logger.exc(error, "Error decoding UART response: {}", received)
@@ -98,7 +96,7 @@ class ESP8266:
                     elif self.STATUS_BUSY in incomingData:
                         self.logger.debug("STATUS_BUSY")
                         # ESP still busy, could consider resetting TTL
-                
+            self.logger.debug("ESP ATTEMPTS: {}", attempts)
             # count down the attempts until we hit 0
             attempts -= 1
             if attempts <= 0:
