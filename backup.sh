@@ -1,6 +1,22 @@
 #!/bin/bash
 
 
+fn_backup () {
+  for n in $(cat files.txt)
+  do
+    echo "Working on $n"
+    mpremote connect $device cp :$n .
+  done
+}
+
+fn_install () {
+  for n in $(cat files.txt)
+  do
+    echo "Working on $n"
+    mpremote connect $device cp $n :
+  done
+}
+
 device=''
 pattern='*usbmodem*'
 
@@ -14,15 +30,19 @@ do
   done
 done
 
-
 if [ -z "$device" ]
 then
   echo "NO DEVICE FOUND"
-else
-  echo "Found device: $device"
-  for n in $(cat files.txt)
-  do
-      echo "Working on $n"
-      mpremote connect $device cp :$n .
-  done
+  exit 0
 fi
+
+echo "Using device: $device"
+
+case $1 in
+  "backup")
+    fn_backup
+    exit;;
+  "install")
+    fn_install
+    exit;;
+esac
