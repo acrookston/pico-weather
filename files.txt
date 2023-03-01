@@ -8,3 +8,4 @@ main.py
 runLoop.py
 removeNonAscii.py
 screen.py
+ssd1306.py
