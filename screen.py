@@ -3,7 +3,7 @@ from ssd1306 import SSD1306_I2C
 from font import FontWriter
 
 DISPLAY_WIDTH  = 128
-DISPLAY_HEIGHT = 32
+DISPLAY_HEIGHT = 64
 DISPLAY_SCL = 5
 DISPLAY_SDA = 4
 
