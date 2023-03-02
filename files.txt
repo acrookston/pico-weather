@@ -5,6 +5,8 @@ httpResponse.py
 logger.py
 logManager.py
 main.py
+networkManager.py
+picoNetworkManager.py
 runLoop.py
 removeNonAscii.py
 screen.py

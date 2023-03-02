@@ -2,12 +2,13 @@ import re, time
 from machine import UART, Pin
 from httpResponse import HttpResponse
 from removeNonAscii import RemoveNonAscii
+from networkManager import NetworkManager, NetworkStatus, NetworkResponse
 
 class ESP8266Timeout(Exception):
     "ESP8266 Execution Timed Out"
     pass
 
-class ESP8266:
+class ESP8266(NetworkManager):
     # command response codes
     STATUS_OK = "OK\r\n"
     STATUS_ERROR = "ERROR\r\n"
@@ -23,7 +24,6 @@ class ESP8266:
     WIFI_AP_WRONG_PWD = "WIFI AP WRONG PASSWORD\r\n"
     WIFI_NO_ACCESS_POINT = "No AP\r\n"
     WIFI_UNKNOWN = "WIFI UNKNOWN"
-
 
     WIFI_MODE_STATION = 1
     WIFI_MODE_ACCESS_POINT = 2
@@ -174,7 +174,7 @@ class ESP8266:
     def wifiGetAccessPoints(self):
         self.execute("AT+CWLAP")
 
-    def wifiConnect(self, ssid, password):
+    def connect(self, ssid, password):
         self.execute('AT+CWJAP="' + ssid  + '","' + password + '"')
 
     def wifiDisconnect(self):
@@ -185,21 +185,18 @@ class ESP8266:
         # EG: +CWJAP:"WiFi","5c:4c:3b:ac:e4:31",10,-54
         result = self.execute('AT+CWJAP?')
         if result != None and self.WIFI_NO_ACCESS_POINT in result:
-            return (self.WIFI_NO_ACCESS_POINT, { "result": result })
+            return NetworkStatus(NetworkStatus.WIFI_NO_ACCESS_POINT)
         content = self.getContentForLineStarting(result, "+CWJAP:")
         if content != None:
             wifi = content.split(',')            
             if len(wifi) > 3:
-                return (
-                    self.WIFI_CONNECTED,
-                    {
-                        "ssid": wifi[0],
-                        "bssid": wifi[1].replace('"', ''),
-                        "channel": int(wifi[2]),
-                        "rssi": int(wifi[3])
-                    }
-                )
-        return (self.WIFI_UNKNOWN, { "result": result })
+                return NetworkStatus(NetworkStatus.WIFI_CONNECTED,
+                                     int(wifi[3]),
+                                     wifi[0],
+                                     wifi[1].replace('"', ''),
+                                     int(wifi[2]))
+
+        return NetworkStatus(NetworkStatus.UNKNOWN)
 
     def getContentForLineStarting(self, result, start):
         if result == None:
@@ -213,7 +210,6 @@ class ESP8266:
                 else:
                     return None
         return None
-            
 
     def parseResponse(self, header, content):
         # Grab the data from response (remove "IPD:{length}:")
@@ -221,7 +217,6 @@ class ESP8266:
         if len(ipdData) < 2:
             return None
         return HttpResponse(ipdData[1])
-
 
     def getVersion(self):
         self.execute('AT+GMR')

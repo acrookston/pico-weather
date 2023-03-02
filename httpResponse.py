@@ -1,7 +1,9 @@
-class HttpResponse:
-    code = None
+from networkManager import NetworkResponse
+
+class HttpResponse(NetworkResponse):
+    status_code = None
     headers = None
-    body = None
+    text = None
     response = None
     contentLength = None
     __rawData = None
@@ -17,20 +19,19 @@ class HttpResponse:
             self.headers = sections[0].split("\r\n")
 
             if len(sections) > 1:
-                self.body = sections[1]
+                self.text = sections[1]
 
             for header in self.headers:
                 if "Transfer-Encoding: chunked" in header:
-                    parseChunkedBody(self.body)
+                    parseChunkedBody(self.text)
 
             # Get the response code from first header
             for code in self.headers[0].split():
                 if code.isdigit():
-                    self.code = int(code)
+                    self.status_code = int(code)
 
     def parseChunkedBody(self):
-        if self.body == None:
-            return
+        pass
         
 
 # Example no content response:

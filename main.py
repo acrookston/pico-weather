@@ -1,10 +1,12 @@
 from machine import Pin, RTC, UART
 from dht import DHT22
-from esp8266 import ESP8266, ESP8266Timeout
 from dateTimeParser import ISO8601StringParser
 from runLoop import RunLoop
 from screen import Screen
 from logManager import LogManager
+from networkManager import NetworkManager, NetworkStatus
+from picoNetworkManager import PicoNetworkManager
+from esp8266 import ESP8266, ESP8266Timeout
 import time, sys, os, logger
 
 WIFI_SSID = ""
@@ -29,6 +31,7 @@ TIME_STATUS_UNSET = 0
 TIME_STATUS_SET = 1
 TIME_STATUS_ERROR = 2
 
+
 class Application:
     temperature = None
     humidity = None
@@ -38,18 +41,25 @@ class Application:
     wifi = 0
     error = None
     timeStatus = TIME_STATUS_UNSET
+    networkManager = None
     sensorPin = None
 
-    def __init__(self, location, sensorPin=2):
+    def __init__(self, location, networkChip, sensorPin=2):
         self.sensorPin = sensorPin
         self.location = location
         self.rtc = RTC()
         self.logManager = LogManager()
         self.logger = self.logManager.logger
         #self.led = machine.Pin(25, Pin.OUT)
-        self.esp01 = ESP8266(logger=self.logger)
+        self.networkManager = self.createNetworkManager(networkChip, self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.screen = Screen()
+
+    def createNetworkManager(self, networkChip, logger):
+        if networkChip == "pico":
+            return PicoNetworkManager(logger)
+        elif networkChip == "esp":
+            return ESPNetworkManager(logger)
 
     def updateScreen(self):
         self.logger.info("updateScreen")
@@ -79,17 +89,14 @@ class Application:
         self.logManager.purgeLogFiles()
 
     def checkWifi(self):
-        status = self.esp01.wifiStatus()
-        if status[0] == ESP8266.WIFI_CONNECTED:
-            return
-        elif status[0] == ESP8266.WIFI_NO_ACCESS_POINT:
-            self.esp01.wifiConnect(WIFI_SSID, WIFI_PASSWORD)
+        self.networkManager.connect(WIFI_SSID, WIFI_PASSWORD)
+        status = self.networkManager.wifiStatus()
 
     def updateTime(self):
-        result = self.esp01.httpGet(TIME_SERVER, TIME_PATH, port=TIME_PORT)
+        result = self.networkManager.httpGet(TIME_SERVER, TIME_PATH, port=TIME_PORT)
         if result != None:
             try:
-                parser = ISO8601StringParser(result.body)
+                parser = ISO8601StringParser(result.text)
                 self.rtc.datetime(parser.datetime())
                 self.timeStatus = TIME_STATUS_SET
                 self.updateScreen()
@@ -132,12 +139,12 @@ class Application:
     def postMetrics(self, body):
         path = "/api/v2/write?u={}&p={}&bucket={}".format(INFLUX_USERNAME, INFLUX_PASSWORD, INFLUX_DATABASE)
         try:
-            httpResult = self.esp01.httpPost(INFLUX_SERVER, path, "plain/text", body, port=INFLUX_PORT)
+            httpResult = self.networkManager.httpPost(INFLUX_SERVER, path, "plain/text", body, port=INFLUX_PORT)
             if httpResult != None:
-                self.logger.debug("HTTP Code:", httpResult.code)
+                self.logger.debug("HTTP Code:", httpResult.status_code)
         except ESP8266Timeout:
             self.logger.info("RESTART - ESP8266Timeout")
-            self.esp01.stop()
+            self.networkManager.stop()
             machine.reset()
 
-Application("test").start()
+Application("test", "pico").start()
