@@ -38,14 +38,15 @@ class Application:
     wifi = 0
     error = None
     timeStatus = TIME_STATUS_UNSET
+    sensorPin = None
 
     def __init__(self, location, sensorPin=2):
+        self.sensorPin = sensorPin
         self.location = location
         self.rtc = RTC()
         self.logManager = LogManager()
         self.logger = self.logManager.logger
         #self.led = machine.Pin(25, Pin.OUT)
-        self.sensor = DHT22(machine.Pin(sensorPin))
         self.esp01 = ESP8266(logger=self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.screen = Screen()
@@ -108,14 +109,18 @@ class Application:
 
     def measureWeather(self):
         self.logger.info("measureWeather")
-        self.sensor.measure()
-        self.temperature = self.sensor.temperature()
-        self.humidity = self.sensor.humidity()
-        if self.rtc != None:
-            self.lastMeasurement = self.rtc.datetime()
-        self.updateScreen()
-        self.postWeather()
-        self.logWeather()
+        try:
+            self.sensor = DHT22(Pin(self.sensorPin))
+            self.sensor.measure()
+            self.temperature = self.sensor.temperature()
+            self.humidity = self.sensor.humidity()
+            if self.rtc != None:
+                self.lastMeasurement = self.rtc.datetime()
+            self.updateScreen()
+            self.postWeather()
+            self.logWeather()
+        except Exception as error:
+            self.logger.exc(error, "Weather error")
 
     def postWeather(self):
         if (self.temperature == None or self.humidity == None):
