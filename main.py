@@ -1,7 +1,7 @@
 from machine import Pin, RTC, UART
 from dht import DHT22
 from dateTimeParser import ISO8601StringParser
-from runLoop import RunLoop
+from runLoop import RunLoop, CallbackOperation
 from screen import Screen
 from logManager import LogManager
 from networkManager import NetworkManager, NetworkStatus
@@ -30,7 +30,6 @@ ERROR_GATEWAY = "GTW ERR"
 TIME_STATUS_UNSET = 0
 TIME_STATUS_SET = 1
 TIME_STATUS_ERROR = 2
-
 
 class Application:
     temperature = None
@@ -77,11 +76,11 @@ class Application:
             raise error
 
     def startRunLoop(self):
-        self.runLoop.add("logs", 60000, self.purgeLogFiles)
-        self.runLoop.add("wifi", 15000, self.checkWifi)
-        self.runLoop.add("weather", 15000, self.measureWeather)
-        self.runLoop.add("ntp", 10000, self.updateTime)
-        self.runLoop.add("display", 5000, self.updateScreen)
+        self.runLoop.add(CallbackOperation("logs", 60000, self.purgeLogFiles))
+        self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
+        self.runLoop.add(CallbackOperation("weather", 15000, self.measureWeather))
+        self.runLoop.add(CallbackOperation("ntp", 10000, self.updateTime))
+        self.runLoop.add(CallbackOperation("display", 5000, self.updateScreen))
         self.runLoop.start()
         self.running = True
 

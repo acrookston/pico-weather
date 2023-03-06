@@ -1,5 +1,25 @@
 import time
 
+class Operation:
+    identifier = None
+    lastTickMs = 0
+    tickIntervalMs = None
+
+    def __init__(self, identifier, tickIntervalMs):
+        self.identifier = identifier
+        self.tickIntervalMs = tickIntervalMs
+
+    def execute(self):
+        pass
+
+class CallbackOperation(Operation):
+    def __init__(self, identifier, tickIntervalMs, callback):
+        super().__init__(identifier, tickIntervalMs)
+        self.callback = callback
+
+    def execute(self):
+        self.callback()
+
 class RunLoop:
     operations = []
     running = False
@@ -9,22 +29,22 @@ class RunLoop:
         self.sleepIntervalMs = sleepIntervalMs
         self.logger = logger
 
-    def add(self, identifier, tickIntervalMs, callback):
-        self.operations.append([identifier, 0, tickIntervalMs, callback])
+    def add(self, operation):
+        self.operations.append(operation)
+        # self.operations.append([identifier, 0, tickIntervalMs, callback])
 
-    def remove(self, identifer):
+    def remove(self, operation):
         for ix in range(len(self.operations)):
-            if self.timers[ix][0] == identifier:
-                del self.timers[ix]
+            if self.operations[ix].identifier == identifier:
+                del self.operations[ix]
                 return
 
     def runOperations(self):
         for ix in range(len(self.operations)):
             operation = self.operations[ix]
-            if time.ticks_diff(operation[1], time.ticks_ms()) <= 0:
-                operation[3]()
-                operation[1] = time.ticks_add(time.ticks_ms(), operation[2])
-                self.operations[ix] = operation
+            if time.ticks_diff(operation.lastTickMs, time.ticks_ms()) <= 0:
+                operation.execute()
+                operation.lastTickMs = time.ticks_add(time.ticks_ms(), operation.tickIntervalMs)
 
     def start(self):
         self.running = True
