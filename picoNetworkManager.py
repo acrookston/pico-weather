@@ -25,7 +25,7 @@ class PicoNetworkManager(NetworkManager):
             request_url = "http://" + host + ":" + port + path
             self.logger.info("POST: {} Body: {}", request_url, content)
             response = urequests.post(request_url, headers = headers, data = content)
-            self.logger.debug(response.text)
+            self.logResponse(response)
             return response
         except Exception as error:
             self.logger.exc(error, "POST error")
@@ -35,10 +35,15 @@ class PicoNetworkManager(NetworkManager):
             request_url = "http://" + host + ":" + port + path
             self.logger.info("GET: {}", request_url)
             response = urequests.get(request_url)
-            self.logger.debug(response.text)
+            self.logResponse(response)
             return response
         except Exception as error:
             self.logger.exc(error, "GET error")
+
+    def logResponse(self, response):
+        if response is None:
+            return
+        self.logger.debug("Response code: {}, headers: {}, body: {}", response.status_code, response.headers, response.text)
 
     def stop():
         self.wlan = None
