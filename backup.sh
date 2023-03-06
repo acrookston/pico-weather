@@ -1,5 +1,6 @@
 #!/bin/bash
 
+device=''
 
 fn_backup () {
   for n in $(cat files.txt)
@@ -17,7 +18,17 @@ fn_install () {
   done
 }
 
-device=''
+fn_run () {
+  mpremote connect $device run main.py
+}
+
+fn_get_logs () {
+  echo "Fetching application.log"
+  mpremote connect $device cp :application.log .
+  echo "Fetching error.log"
+  mpremote connect $device cp :error.log .
+}
+
 pattern='*usbmodem*'
 
 for candidate in $(mpremote connect list)
@@ -36,7 +47,7 @@ then
   exit 0
 fi
 
-echo "Using device: $device"
+echo "Found device: $device"
 
 case $1 in
   "backup")
@@ -44,5 +55,14 @@ case $1 in
     exit;;
   "install")
     fn_install
+    exit;;
+  "device")
+    # Already printed
+    exit;;
+  "run")
+    fn_run
+    exit;;
+  "logs")
+    fn_get_logs
     exit;;
 esac
