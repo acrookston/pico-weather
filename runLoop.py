@@ -1,24 +1,34 @@
 import time
 
+class Events:
+    UPDATE_SCREEN = 0
+    WEATHER_READING = 1
+    UPDATE_TIME = 2
+
 class Operation:
     identifier = None
     lastTickMs = 0
+    scheduled = False
     tickIntervalMs = None
 
-    def __init__(self, identifier, tickIntervalMs):
+    def __init__(self, identifier, scheduled=False, tickIntervalMs=None):
         self.identifier = identifier
+        self.scheduled = scheduled
         self.tickIntervalMs = tickIntervalMs
 
-    def execute(self):
+    def execute(self, runLoop, args=None):
+        pass
+
+    def handleEvent(self, runLoop, event, args=None):
         pass
 
 class CallbackOperation(Operation):
     def __init__(self, identifier, tickIntervalMs, callback):
-        super().__init__(identifier, tickIntervalMs)
+        super().__init__(identifier, scheduled=True, tickIntervalMs=tickIntervalMs)
         self.callback = callback
 
-    def execute(self):
-        self.callback()
+    def execute(self, runLoop):
+        self.callback(runLoop)
 
 class RunLoop:
     operations = []
@@ -31,19 +41,23 @@ class RunLoop:
 
     def add(self, operation):
         self.operations.append(operation)
-        # self.operations.append([identifier, 0, tickIntervalMs, callback])
 
     def remove(self, operation):
         for ix in range(len(self.operations)):
-            if self.operations[ix].identifier == identifier:
+            if self.operations[ix].identifier is operation.identifier:
                 del self.operations[ix]
                 return
+
+    def fireEvent(self, event, args=None):
+        self.logger.info("Event fired: {}, args: {}", event, args)
+        for operation in self.operations:
+            operation.handleEvent(self, event, args=args)
 
     def runOperations(self):
         for ix in range(len(self.operations)):
             operation = self.operations[ix]
-            if time.ticks_diff(operation.lastTickMs, time.ticks_ms()) <= 0:
-                operation.execute()
+            if operation.scheduled and time.ticks_diff(operation.lastTickMs, time.ticks_ms()) <= 0:
+                operation.execute(self)
                 operation.lastTickMs = time.ticks_add(time.ticks_ms(), operation.tickIntervalMs)
 
     def start(self):

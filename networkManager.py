@@ -23,7 +23,7 @@ class NetworkResponse:
 class NetworkManager:
     def connect(self, ssid, password):
         pass
-        
+
     def wifiStatus(self):
         pass
 

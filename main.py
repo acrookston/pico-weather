@@ -1,10 +1,9 @@
 from machine import Pin, RTC, UART
 from dht import DHT22
 from dateTimeParser import ISO8601StringParser
-from runLoop import RunLoop, CallbackOperation
-from screen import Screen
+from runLoop import RunLoop, Events, CallbackOperation
+from screen import Screen, ViewModel
 from logManager import LogManager
-from networkManager import NetworkManager, NetworkStatus
 from picoNetworkManager import PicoNetworkManager
 from esp8266 import ESP8266, ESP8266Timeout
 import time, sys, os, logger
@@ -42,6 +41,7 @@ class Application:
     timeStatus = TIME_STATUS_UNSET
     networkManager = None
     sensorPin = None
+    operators = []
 
     def __init__(self, location, networkChip, sensorPin=2):
         self.sensorPin = sensorPin
@@ -52,21 +52,13 @@ class Application:
         #self.led = machine.Pin(25, Pin.OUT)
         self.networkManager = self.createNetworkManager(networkChip, self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
-        self.screen = Screen()
+        self.operators.append(Screen(logger=self.logger))
 
     def createNetworkManager(self, networkChip, logger):
         if networkChip == "pico":
             return PicoNetworkManager(logger)
         elif networkChip == "esp":
-            return ESPNetworkManager(logger)
-
-    def updateScreen(self):
-        self.logger.info("updateScreen")
-        self.screen.temperature = self.temperature
-        self.screen.humidity = self.humidity
-        if self.timeStatus is TIME_STATUS_SET:
-            self.screen.datetime = self.rtc.datetime()
-        self.screen.update()
+            return ESP8266(logger)
 
     def start(self):
         try:
@@ -80,25 +72,26 @@ class Application:
         self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
         self.runLoop.add(CallbackOperation("weather", 15000, self.measureWeather))
         self.runLoop.add(CallbackOperation("ntp", 10000, self.updateTime))
-        self.runLoop.add(CallbackOperation("display", 5000, self.updateScreen))
+        for operator in self.operators:
+            self.runLoop.add(operator)
         self.runLoop.start()
         self.running = True
 
-    def purgeLogFiles(self):
+    def purgeLogFiles(self, runLoop):
         self.logManager.purgeLogFiles()
 
-    def checkWifi(self):
+    def checkWifi(self, runLoop):
         self.networkManager.connect(WIFI_SSID, WIFI_PASSWORD)
         status = self.networkManager.wifiStatus()
 
-    def updateTime(self):
+    def updateTime(self, runLoop):
         result = self.networkManager.httpGet(TIME_SERVER, TIME_PATH, port=TIME_PORT)
         if result != None:
             try:
                 parser = ISO8601StringParser(result.text)
                 self.rtc.datetime(parser.datetime())
                 self.timeStatus = TIME_STATUS_SET
-                self.updateScreen()
+                runLoop.fireEvent(Events.UPDATE_TIME, { "time": self.rtc.datetime() })
                 return True
             except:
                 self.timeStatus = TIME_STATUS_ERROR
@@ -113,7 +106,7 @@ class Application:
         else:
             self.logger.info("Time: unknown Temperature: {:.2f}°C Humidity: {:.2f}%", self.temperature, self.humidity)
 
-    def measureWeather(self):
+    def measureWeather(self, runLoop):
         self.logger.info("measureWeather")
         try:
             self.sensor = DHT22(Pin(self.sensorPin))
@@ -122,7 +115,7 @@ class Application:
             self.humidity = self.sensor.humidity()
             if self.rtc != None:
                 self.lastMeasurement = self.rtc.datetime()
-            self.updateScreen()
+            runLoop.fireEvent(Events.WEATHER_READING, { "temperature": self.temperature, "humidity": self.humidity })
             self.postWeather()
             self.logWeather()
         except Exception as error:
