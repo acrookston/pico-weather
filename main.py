@@ -6,29 +6,8 @@ from screen import Screen, ViewModel
 from logManager import LogManager
 from picoNetworkManager import PicoNetworkManager
 from esp8266 import ESP8266, ESP8266Timeout
+from config import Config
 import time, sys, os, logger
-
-WIFI_SSID = ""
-WIFI_PASSWORD = ""
-
-TIME_SERVER = "192.168.50.31"
-TIME_PORT = "80"
-TIME_PATH = "/time.php"
-
-INFLUX_SERVER = "192.168.50.31"
-INFLUX_PORT = "8086"
-INFLUX_USERNAME = ""
-INFLUX_PASSWORD = ""
-INFLUX_DATABASE = ""
-
-WEATHER_LOCATION = "test"
-
-ERROR_WIFI = "WIFI ERR"
-ERROR_GATEWAY = "GTW ERR"
-
-TIME_STATUS_UNSET = 0
-TIME_STATUS_SET = 1
-TIME_STATUS_ERROR = 2
 
 class Application:
     temperature = None
@@ -38,7 +17,7 @@ class Application:
     rtc = None
     wifi = 0
     error = None
-    timeStatus = TIME_STATUS_UNSET
+    timeStatus = Config.TIME_STATUS_UNSET
     networkManager = None
     sensorPin = None
     operators = []
@@ -81,20 +60,20 @@ class Application:
         self.logManager.purgeLogFiles()
 
     def checkWifi(self, runLoop):
-        self.networkManager.connect(WIFI_SSID, WIFI_PASSWORD)
+        self.networkManager.connect(Config.WIFI_SSID, Config.WIFI_PASSWORD)
         status = self.networkManager.wifiStatus()
 
     def updateTime(self, runLoop):
-        result = self.networkManager.httpGet(TIME_SERVER, TIME_PATH, port=TIME_PORT)
+        result = self.networkManager.httpGet(Config.TIME_SERVER, Config.TIME_PATH, port=Config.TIME_PORT)
         if result != None:
             try:
                 parser = ISO8601StringParser(result.text)
                 self.rtc.datetime(parser.datetime())
-                self.timeStatus = TIME_STATUS_SET
+                self.timeStatus = Config.TIME_STATUS_SET
                 runLoop.fireEvent(Events.UPDATE_TIME, { "time": self.rtc.datetime() })
                 return True
             except:
-                self.timeStatus = TIME_STATUS_ERROR
+                self.timeStatus = Config.TIME_STATUS_ERROR
                 return False
         else:
             return False
@@ -125,13 +104,21 @@ class Application:
         if (self.temperature == None or self.humidity == None):
             self.logger.info("POST: NO MEASUREMENTS")
             return
-        body = "weather,location={},temp={} hum={}".format(self.location, self.temperature, self.humidity)
+        body = "weather,location={},temp={} hum={}".format(self.location,
+                                                           self.temperature,
+                                                           self.humidity)
         self.postMetrics(body)
 
     def postMetrics(self, body):
-        path = "/api/v2/write?u={}&p={}&bucket={}".format(INFLUX_USERNAME, INFLUX_PASSWORD, INFLUX_DATABASE)
+        path = "/api/v2/write?u={}&p={}&bucket={}".format(Config.INFLUX_USERNAME,
+                                                          Config.INFLUX_PASSWORD,
+                                                          Config.INFLUX_DATABASE)
         try:
-            httpResult = self.networkManager.httpPost(INFLUX_SERVER, path, "plain/text", body, port=INFLUX_PORT)
+            httpResult = self.networkManager.httpPost(Config.INFLUX_SERVER,
+                                                      path,
+                                                      "plain/text",
+                                                      body,
+                                                      port=Config.INFLUX_PORT)
             if httpResult != None:
                 self.logger.debug("HTTP Code:", httpResult.status_code)
         except ESP8266Timeout:
