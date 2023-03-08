@@ -4,6 +4,14 @@ class Events:
     UPDATE_SCREEN = 0
     WEATHER_READING = 1
     UPDATE_TIME = 2
+    POST_METRICS = 3
+
+class EventArgs:
+    TEMPERATURE = "temperature"
+    HUMIDITY = "humidity"
+    TIME = "time"
+    MEASURED_AT = "measured_at"
+    METRICS = "metrics"
 
 class Operation:
     identifier = None
@@ -16,7 +24,7 @@ class Operation:
         self.scheduled = scheduled
         self.tickIntervalMs = tickIntervalMs
 
-    def execute(self, runLoop, args=None):
+    def execute(self, runLoop):
         pass
 
     def handleEvent(self, runLoop, event, args=None):
@@ -51,13 +59,20 @@ class RunLoop:
     def fireEvent(self, event, args=None):
         self.logger.info("Event fired: {}, args: {}", event, args)
         for operation in self.operations:
-            operation.handleEvent(self, event, args=args)
+            try:
+                operation.handleEvent(self, event, args=args)
+            except Exception as error:
+                self.logger.exc(error, "Error handling event {} in {}", event, operation.identifier)
+
 
     def runOperations(self):
         for ix in range(len(self.operations)):
             operation = self.operations[ix]
             if operation.scheduled and time.ticks_diff(operation.lastTickMs, time.ticks_ms()) <= 0:
-                operation.execute(self)
+                try:
+                    operation.execute(self)
+                except Exception as error:
+                    self.logger.exc(error, "Error executing operation {}", operation.identifier)
                 operation.lastTickMs = time.ticks_add(time.ticks_ms(), operation.tickIntervalMs)
 
     def start(self):

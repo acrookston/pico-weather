@@ -1,129 +1,46 @@
-from machine import Pin, RTC, UART
-from dht import DHT22
-from dateTimeParser import ISO8601StringParser
-from runLoop import RunLoop, Events, CallbackOperation
-from screen import Screen, ViewModel
+from runLoop import RunLoop, CallbackOperation
+from screen import Screen
+from timeManager import TimeManager
 from logManager import LogManager
 from picoNetworkManager import PicoNetworkManager
-from esp8266 import ESP8266, ESP8266Timeout
+from metricsUploader import MetricsUploader
+from weather import WeatherChecker, WeatherLogger
+from esp8266 import ESP8266
 from config import Config
-import time, sys, os, logger
 
 class Application:
-    temperature = None
-    humidity = None
-    lastMeasurement = None
     runLoop = None
-    rtc = None
-    wifi = 0
-    error = None
-    timeStatus = Config.TIME_STATUS_UNSET
     networkManager = None
-    sensorPin = None
-    operators = []
 
-    def __init__(self, location, networkChip, sensorPin=2):
-        self.sensorPin = sensorPin
-        self.location = location
-        self.rtc = RTC()
+    def __init__(self):
         self.logManager = LogManager()
         self.logger = self.logManager.logger
         #self.led = machine.Pin(25, Pin.OUT)
-        self.networkManager = self.createNetworkManager(networkChip, self.logger)
+        self.networkManager = self.createNetworkManager(self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
-        self.operators.append(Screen(logger=self.logger))
+        self.runLoop.add(self.logManager)
+        self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
+        self.runLoop.add(Screen(logger=self.logger))
+        self.runLoop.add(TimeManager(self.networkManager, self.logger))
+        self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
+        self.runLoop.add(WeatherLogger(self.logger))
+        self.runLoop.add(WeatherChecker(self.logger))
 
-    def createNetworkManager(self, networkChip, logger):
-        if networkChip == "pico":
+    def createNetworkManager(self, logger):
+        if Config.NETWORK_CHIP == "pico":
             return PicoNetworkManager(logger)
-        elif networkChip == "esp":
+        elif Config.NETWORK_CHIP == "esp":
             return ESP8266(logger)
 
     def start(self):
         try:
-            self.startRunLoop()
+            self.runLoop.start()
         except Exception as error:
             self.logger.exc(error, "Application exception")
             raise error
-
-    def startRunLoop(self):
-        self.runLoop.add(CallbackOperation("logs", 60000, self.purgeLogFiles))
-        self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
-        self.runLoop.add(CallbackOperation("weather", 15000, self.measureWeather))
-        self.runLoop.add(CallbackOperation("ntp", 10000, self.updateTime))
-        for operator in self.operators:
-            self.runLoop.add(operator)
-        self.runLoop.start()
-        self.running = True
-
-    def purgeLogFiles(self, runLoop):
-        self.logManager.purgeLogFiles()
 
     def checkWifi(self, runLoop):
         self.networkManager.connect(Config.WIFI_SSID, Config.WIFI_PASSWORD)
         status = self.networkManager.wifiStatus()
 
-    def updateTime(self, runLoop):
-        result = self.networkManager.httpGet(Config.TIME_SERVER, Config.TIME_PATH, port=Config.TIME_PORT)
-        if result != None:
-            try:
-                parser = ISO8601StringParser(result.text)
-                self.rtc.datetime(parser.datetime())
-                self.timeStatus = Config.TIME_STATUS_SET
-                runLoop.fireEvent(Events.UPDATE_TIME, { "time": self.rtc.datetime() })
-                return True
-            except:
-                self.timeStatus = Config.TIME_STATUS_ERROR
-                return False
-        else:
-            return False
-
-    def logWeather(self):
-        if self.lastMeasurement != None:
-            timestring="%04d-%02d-%02d %02d:%02d:%02d"%(self.lastMeasurement[0:3] + self.lastMeasurement[4:7])
-            self.logger.info("Time: {} Temperature: {:.2f}°C Humidity: {:.2f}%", timestring, self.temperature, self.humidity)
-        else:
-            self.logger.info("Time: unknown Temperature: {:.2f}°C Humidity: {:.2f}%", self.temperature, self.humidity)
-
-    def measureWeather(self, runLoop):
-        self.logger.info("measureWeather")
-        try:
-            self.sensor = DHT22(Pin(self.sensorPin))
-            self.sensor.measure()
-            self.temperature = self.sensor.temperature()
-            self.humidity = self.sensor.humidity()
-            if self.rtc != None:
-                self.lastMeasurement = self.rtc.datetime()
-            runLoop.fireEvent(Events.WEATHER_READING, { "temperature": self.temperature, "humidity": self.humidity })
-            self.postWeather()
-            self.logWeather()
-        except Exception as error:
-            self.logger.exc(error, "Weather error")
-
-    def postWeather(self):
-        if (self.temperature == None or self.humidity == None):
-            self.logger.info("POST: NO MEASUREMENTS")
-            return
-        body = "weather,location={},temp={} hum={}".format(self.location,
-                                                           self.temperature,
-                                                           self.humidity)
-        self.postMetrics(body)
-
-    def postMetrics(self, body):
-        path = "/api/v2/write?u={}&p={}&bucket={}".format(Config.INFLUX_USERNAME,
-                                                          Config.INFLUX_PASSWORD,
-                                                          Config.INFLUX_DATABASE)
-        try:
-            httpResult = self.networkManager.httpPost(Config.INFLUX_SERVER,
-                                                      path,
-                                                      "plain/text",
-                                                      body,
-                                                      port=Config.INFLUX_PORT)
-            if httpResult != None:
-                self.logger.debug("HTTP Code:", httpResult.status_code)
-        except ESP8266Timeout:
-            self.logger.info("RESTART - ESP8266Timeout")
-            self.networkManager.stop()
-            machine.reset()
-
-Application("test", "pico").start()
+Application().start()

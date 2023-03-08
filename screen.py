@@ -1,7 +1,7 @@
 from machine import I2C, Pin
 from ssd1306 import SSD1306_I2C
 from font import FontWriter
-from runLoop import Operation, Events
+from runLoop import Operation, Events, EventArgs
 
 DISPLAY_WIDTH  = 128
 DISPLAY_HEIGHT = 64
@@ -38,9 +38,8 @@ class Screen(Operation):
             self.model.humidity = args["humidity"]
             self.update()
         elif event is Events.UPDATE_TIME:
-            if "time" in args and args["time"] is not None:
-                self.model.datetime = args["time"]
-                self.update()
+            self.model.datetime = args[EventArgs.TIME].datetime()
+            self.update()
 
     def update(self):
         self.logger.debug("Update Screen with model: {}", self.model)

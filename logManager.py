@@ -1,9 +1,10 @@
-from logger  import Logger, Formatter, StreamHandler, FileHandler, ERROR
+from runLoop import Operation, Events
+from logger import Logger, Formatter, StreamHandler, FileHandler, ERROR
 import sys,  os
 
 MAX_LOG_SIZE = 500_000
 
-class LogManager:
+class LogManager(Operation):
     logger = None
     formatter = None
     applicationLogger = None
@@ -12,6 +13,7 @@ class LogManager:
     errorLogName = "error.log"
 
     def __init__(self):
+        super().__init__("logManager", True, 60000)
         self.logger = Logger("application-logger")
         self.formatter = Formatter(style="{")
         sh = StreamHandler(stream=sys.stdout)
@@ -35,3 +37,7 @@ class LogManager:
                     self.logger.info("Purged file: {} size: {}", handler.filename, stats[6])
             except OSError as error:
                 self.logger.exc(error, "Log file check error {}", handler.filename)
+
+    # Operation
+    def execute(self, runLoop):
+        self.purgeLogFiles()
