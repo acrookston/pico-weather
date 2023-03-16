@@ -22,11 +22,22 @@ fn_run () {
   mpremote connect $device run main.py
 }
 
+fn_ls () {
+  mpremote connect $device fs ls
+}
+
 fn_get_logs () {
   echo "Fetching application.log"
   mpremote connect $device cp :application.log .
   echo "Fetching error.log"
   mpremote connect $device cp :error.log .
+}
+
+fn_rm_logs () {
+  echo "Fetching application.log"
+  mpremote connect $device fs rm application.log
+  echo "Fetching error.log"
+  mpremote connect $device fs rm error.log
 }
 
 pattern='*usbmodem*'
@@ -62,7 +73,13 @@ case $1 in
   "run")
     fn_run
     exit;;
+  "ls")
+    fn_ls
+    exit;;
   "logs")
     fn_get_logs
+    exit;;
+  "rm-logs")
+    fn_rm_logs
     exit;;
 esac
