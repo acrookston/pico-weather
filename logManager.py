@@ -1,6 +1,6 @@
 from runLoop import Operation, Events
 from logger import Logger, Formatter, StreamHandler, FileHandler, ERROR
-import sys,  os
+import sys, os, time
 
 MAX_LOG_SIZE = 500_000
 
@@ -34,6 +34,7 @@ class LogManager(Operation):
                 if stats[6] > MAX_LOG_SIZE:
                     handler.close()
                     os.remove(handler.filename)
+                    time.sleep(0.1)
                     self.logger.info("Purged file: {} size: {}", handler.filename, stats[6])
             except OSError as error:
                 self.logger.exc(error, "Log file check error {}", handler.filename)
