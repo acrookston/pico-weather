@@ -1,12 +1,8 @@
 from machine import I2C, Pin
 from ssd1306 import SSD1306_I2C
-from font import FontWriter
+from font import FontWriter, Orientation
 from runLoop import Operation, Events, EventArgs
-
-DISPLAY_WIDTH  = 128
-DISPLAY_HEIGHT = 64
-DISPLAY_SCL = 5
-DISPLAY_SDA = 4
+from config import Config
 
 class ViewModel:
     datetime = None
@@ -16,13 +12,22 @@ class ViewModel:
 
 class Screen(Operation):
     logger = None
+    i2c = None
+    display = None
+    fontWriter = None
+    orientation = Orientation.LANDSCAPE
 
-    def __init__(self, logger):
+    def __init__(self, logger, orientation=Orientation.LANDSCAPE):
         super().__init__("screen", scheduled=True, tickIntervalMs=5000)
-        self.i2c = I2C(0, scl=Pin(DISPLAY_SCL), sda=Pin(DISPLAY_SDA), freq=200000)
-        self.display = SSD1306_I2C(DISPLAY_WIDTH, DISPLAY_HEIGHT, self.i2c)
+        self.i2c = I2C(0, scl=Pin(Config.GPIO_PIN_DISPLAY_SCL),
+                       sda=Pin(Config.GPIO_PIN_DISPLAY_SDA),
+                       freq=200000)
+        self.display = SSD1306_I2C(Config.DISPLAY_WIDTH,
+                                   Config.DISPLAY_HEIGHT,
+                                   self.i2c)
         self.display.contrast(0x00)
-        self.fontWriter = FontWriter(self.display)
+        self.fontWriter = FontWriter(self.display, orientation)
+        self.orientation = orientation
 
         self.logger = logger
         self.model = ViewModel()
@@ -45,17 +50,17 @@ class Screen(Operation):
         self.logger.debug("Update Screen with model: {}", self.model)
 
         self.display.fill(0)
-
         if self.model.datetime != None:
             timestring = str("%02d:%02d" %  (self.model.datetime[4:6]))
-            self.fontWriter.write(timestring, 20, 2, 6)
+            self.fontWriter.write(timestring, 20, 0, 13)
 
         if self.model.temperature != None:
             temperatureText = str("{:0.1f}".format(self.model.temperature) + "°")
-            self.fontWriter.write(temperatureText, 12, 80, 2)
+            self.fontWriter.write(temperatureText, 20, 0, 38)
 
         if self.model.humidity != None:
             humidityText = str("{:0.1f}".format(self.model.humidity) + "%")
-            self.fontWriter.write(humidityText, 12, 80, 18)
+            self.fontWriter.write(humidityText, 20, 0, 63)
 
         self.display.show()
+ 

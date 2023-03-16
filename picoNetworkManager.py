@@ -11,10 +11,10 @@ class PicoNetworkManager(NetworkManager):
         self.wlan.active(True)
 
     def connect(self, ssid, password):
-        self.wlan.connect(ssid, password)
+        print("WLAN", self.wlan.connect(ssid, password))
 
     def wifiStatus(self):
-        self.logger.debug("WLAN: {}", self.wlan.isconnected())
+        self.logger.debug("WLAN: {}, {}", self.wlan.isconnected(), self.wlan.status())
 
     def httpPost(self, host, path, content_type, content, user_agent="RPi", port=80):
         try:

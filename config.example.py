@@ -1,3 +1,4 @@
+# Copy this file to config.py and enter the values
 class Config:
     # WIFI information
     WIFI_SSID = "[WIFI NAME]"
@@ -21,6 +22,11 @@ class Config:
 
     # Hardware settings:
     GPIO_PIN_DHT_22_DATA = 2
+    GPIO_PIN_DISPLAY_SDA = 4
+    GPIO_PIN_DISPLAY_SCL = 5
+
+    DISPLAY_WIDTH  = 128
+    DISPLAY_HEIGHT = 64
 
     # Which network chip you are using?
     # "pico" for a Pico W (recommended)

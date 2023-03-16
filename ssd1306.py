@@ -85,6 +85,14 @@ class SSD1306(framebuf.FrameBuffer):
     def invert(self, invert):
         self.write_cmd(SET_NORM_INV | (invert & 1))
 
+    def mirror(self, flag):
+        if flag:
+            self.write_cmd(SET_COM_OUT_DIR)             # mirror vertically
+            self.write_cmd(SET_SEG_REMAP)               # mirror horizontally (64 rows)
+        else:
+            self.write_cmd(SET_COM_OUT_DIR | 0x08)
+            self.write_cmd(SET_SEG_REMAP | 0x01)
+
     def show(self):
         x0 = 0
         x1 = self.width - 1

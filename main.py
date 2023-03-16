@@ -1,5 +1,6 @@
 from runLoop import RunLoop, CallbackOperation
 from screen import Screen
+from font import Orientation
 from timeManager import TimeManager
 from logManager import LogManager
 from picoNetworkManager import PicoNetworkManager
@@ -20,7 +21,7 @@ class Application:
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.runLoop.add(self.logManager)
         self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
-        self.runLoop.add(Screen(logger=self.logger))
+        self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
         self.runLoop.add(TimeManager(self.networkManager, self.logger))
         self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
         self.runLoop.add(WeatherLogger(self.logger))
