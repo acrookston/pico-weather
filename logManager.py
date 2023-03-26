@@ -1,8 +1,8 @@
-from runLoop import Operation, Events
+from runLoop import Operation
 from logger import Logger, Formatter, StreamHandler, FileHandler, ERROR
 import sys, os, time
 
-MAX_LOG_SIZE = 500_000
+MAX_LOG_SIZE = 100_000
 
 class LogManager(Operation):
     logger = None
@@ -11,9 +11,11 @@ class LogManager(Operation):
     errorLogger = None
     applicationLogName = "application.log"
     errorLogName = "error.log"
+    maxLogSize = MAX_LOG_SIZE
+    minFreeSpace = MAX_LOG_SIZE
 
-    def __init__(self):
-        super().__init__("logManager", True, 60000)
+    def __init__(self, maxLogSize=MAX_LOG_SIZE, minFreeStorage=MAX_LOG_SIZE):
+        super().__init__("logManager", True, 30_000)
         self.logger = Logger("application-logger")
         self.formatter = Formatter(style="{")
         sh = StreamHandler(stream=sys.stdout)
@@ -25,13 +27,26 @@ class LogManager(Operation):
         self.errorLogger = FileHandler(self.errorLogName, level=ERROR)
         self.errorLogger.formatter = self.formatter
         self.logger.addHandler(self.errorLogger)
+        self.maxLogSize = maxLogSize
+        self.minFreeSpace = minFreeStorage
+
+    def freeSpace(self):
+        try:
+            # statvfs output: (4096, 4096, 212, 67, 67, 0, 0, 0, 0, 255)
+            stats = os.statvfs('//')
+            return stats[0] * stats[3] # / 1048576
+        except OSError:
+            return -1
 
     def purgeLogFiles(self):
-        # (32768, 0, 0, 0, 0, 0, 358115, 1676245004, 1676245004, 1676245004)
+        freeSpace = self.freeSpace()
+        underAllowedSpace = freeSpace < self.minFreeSpace
+        self.logger.info("System storage free space: {}. Under allowed: {}", freeSpace, underAllowedSpace)
+        # os.stat output: (32768, 0, 0, 0, 0, 0, 358115, 1676245004, 1676245004, 1676245004)
         for handler in (self.applicationLogger, self.errorLogger):
             try:
                 stats = os.stat(handler.filename)
-                if stats[6] > MAX_LOG_SIZE:
+                if underAllowedSpace or stats[6] > self.maxLogSize:
                     handler.close()
                     os.remove(handler.filename)
                     time.sleep(0.1)

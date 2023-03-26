@@ -8,6 +8,7 @@ from metricsUploader import MetricsUploader
 from weather import WeatherChecker, WeatherLogger
 from esp8266 import ESP8266
 from config import Config
+import machine
 
 class Application:
     runLoop = None
@@ -16,11 +17,10 @@ class Application:
     def __init__(self):
         self.logManager = LogManager()
         self.logger = self.logManager.logger
-        #self.led = machine.Pin(25, Pin.OUT)
         self.networkManager = self.createNetworkManager(self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.runLoop.add(self.logManager)
-        self.runLoop.add(CallbackOperation("wifi", 15000, self.checkWifi))
+        self.runLoop.add(CallbackOperation("wifi", 15_000, self.checkWifi))
         self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
         self.runLoop.add(TimeManager(self.networkManager, self.logger))
         self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
@@ -37,8 +37,10 @@ class Application:
         try:
             self.runLoop.start()
         except Exception as error:
+            self.logManager.purgeLogFiles()
             self.logger.exc(error, "Application exception")
-            raise error
+            self.logger.warning("Restarting machine")
+            machine.reset()
 
     def checkWifi(self, runLoop):
         self.networkManager.connect(Config.WIFI_SSID, Config.WIFI_PASSWORD)
