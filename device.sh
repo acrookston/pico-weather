@@ -22,6 +22,10 @@ fn_run () {
   mpremote connect $device run main.py
 }
 
+fn_repl () {
+  mpremote connect $device repl
+}
+
 fn_ls () {
   mpremote connect $device fs ls
 }
@@ -72,6 +76,9 @@ case $1 in
     exit;;
   "run")
     fn_run
+    exit;;
+  "repl")
+    fn_repl
     exit;;
   "ls")
     fn_ls
