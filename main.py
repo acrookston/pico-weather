@@ -6,6 +6,8 @@ from logManager import LogManager
 from picoNetworkManager import PicoNetworkManager
 from metricsUploader import MetricsUploader
 from weather import WeatherChecker, WeatherLogger
+from buttonManager import ButtonManager
+from applicationEventHandler import ApplicationEventHandler
 from esp8266 import ESP8266
 from config import Config
 import machine
@@ -20,12 +22,14 @@ class Application:
         self.networkManager = self.createNetworkManager(self.logger)
         self.runLoop = RunLoop(1000, logger=self.logger)
         self.runLoop.add(self.logManager)
+        self.runLoop.add(ApplicationEventHandler(self.logger))
         self.runLoop.add(CallbackOperation("wifi", 15_000, self.checkWifi))
         self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
         self.runLoop.add(TimeManager(self.networkManager, self.logger))
         self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
         self.runLoop.add(WeatherLogger(self.logger))
         self.runLoop.add(WeatherChecker(self.logger))
+        self.runLoop.add(ButtonManager(self.logger))
 
     def createNetworkManager(self, logger):
         if Config.NETWORK_CHIP == "pico":

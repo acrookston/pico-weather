@@ -16,6 +16,7 @@ class Screen(Operation):
     display = None
     fontWriter = None
     orientation = Orientation.LANDSCAPE
+    displayOn = True
 
     def __init__(self, logger, orientation=Orientation.LANDSCAPE):
         super().__init__("screen", scheduled=True, tickIntervalMs=5000)
@@ -25,6 +26,7 @@ class Screen(Operation):
         self.display = SSD1306_I2C(Config.DISPLAY_WIDTH,
                                    Config.DISPLAY_HEIGHT,
                                    self.i2c)
+        self.display.poweron()
         self.display.contrast(0x00)
         self.fontWriter = FontWriter(self.display, orientation)
         self.orientation = orientation
@@ -45,6 +47,13 @@ class Screen(Operation):
         elif event is Events.UPDATE_TIME:
             self.model.datetime = args[EventArgs.TIME].datetime()
             self.update()
+        elif event is Events.BUTTON_PRESSED:
+            if self.displayOn:
+                self.display.poweroff()
+                self.displayOn = False
+            else:
+                self.display.poweron()
+                self.displayOn = True
 
     def update(self):
         self.logger.debug("Update Screen with model: {}", self.model)

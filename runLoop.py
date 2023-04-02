@@ -5,6 +5,8 @@ class Events:
     WEATHER_READING = 1
     UPDATE_TIME = 2
     POST_METRICS = 3
+    BUTTON_PRESSED = 4
+    BUTTON_LONG_PRESSED = 5
 
 class EventArgs:
     TEMPERATURE = "temperature"
