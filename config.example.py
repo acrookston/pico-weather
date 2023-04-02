@@ -4,6 +4,11 @@ class Config:
     WIFI_SSID = "[WIFI NAME]"
     WIFI_PASSWORD = "[WIFI PASSWORD]"
 
+    # Enable if you have a screen connected
+    ENABLE_SCREEN = True
+    # Enable if you have a button connected
+    ENABLE_BUTTON = True
+
     # The name this station should be reporting metrics as
     WEATHER_LOCATION = ""
 

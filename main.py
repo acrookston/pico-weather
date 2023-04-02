@@ -24,12 +24,14 @@ class Application:
         self.runLoop.add(self.logManager)
         self.runLoop.add(ApplicationEventHandler(self.logger))
         self.runLoop.add(CallbackOperation("wifi", 15_000, self.checkWifi))
-        self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
         self.runLoop.add(TimeManager(self.networkManager, self.logger))
         self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
         self.runLoop.add(WeatherLogger(self.logger))
         self.runLoop.add(WeatherChecker(self.logger))
-        self.runLoop.add(ButtonManager(self.logger))
+        if Config.ENABLE_SCREEN:
+            self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
+        if Config.ENABLE_BUTTON:
+            self.runLoop.add(ButtonManager(self.logger))
 
     def createNetworkManager(self, logger):
         if Config.NETWORK_CHIP == "pico":
