@@ -41,7 +41,8 @@ class LogManager(Operation):
     def purgeLogFiles(self):
         freeSpace = self.freeSpace()
         underAllowedSpace = freeSpace < self.minFreeSpace
-        self.logger.info("System storage free space: {}. Under allowed: {}", freeSpace, underAllowedSpace)
+        self.logger.info("System storage free space: {}. Min free allowed: {}", freeSpace, self.minFreeSpace)
+        removedFiles = False
         # os.stat output: (32768, 0, 0, 0, 0, 0, 358115, 1676245004, 1676245004, 1676245004)
         for handler in (self.applicationLogger, self.errorLogger):
             try:
@@ -51,8 +52,11 @@ class LogManager(Operation):
                     os.remove(handler.filename)
                     time.sleep(0.1)
                     self.logger.info("Purged file: {} size: {}", handler.filename, stats[6])
+                    removedFiles = True
             except OSError as error:
                 self.logger.exc(error, "Log file check error {}", handler.filename)
+        if removedFiles:
+            self.logger.info("System storage free space: {}. Min free allowed: {}", self.freeSpace(), self.minFreeSpace)
 
     # Operation
     def execute(self, runLoop):
