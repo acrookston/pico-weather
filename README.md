@@ -22,13 +22,13 @@ Another challenge was getting the time and date to the Picos since they do not h
 
 I also used a 128x64 OLED I2C screen from AZDelivery and of course the DHT22 temperature and humidity sensor, a push button and two 10k ohm resistors. Here is the connection diagram, but the pins are configurable in config.py.
 
-## ![pico-dht22-i2c](/Users/andy/code/pi/pico-dht22-i2c.png)
+## ![pico-dht22-i2c](pico-dht22-i2c.png)
 
 
 
 Vision for what the small screen can display, some of this is in place already:
 
-![pico-screen](/Users/andy/code/pi/pico-screen.png)
+![pico-screen](pico-screen.png)
 
 ## Learnings
 
