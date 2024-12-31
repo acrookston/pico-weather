@@ -6,8 +6,14 @@ class Config:
 
     # Enable if you have a screen connected
     ENABLE_SCREEN = True
-    # Enable if you have a button connected
+    # Enable to auto-sleep the screen and after how long
+    ENABLE_SCREEN_SLEEP = True
+    SCREEN_SLEEP_TIMEOUT_MS = 5000
+    # Enable if you have a button connected, to wake/sleep the screen.
     ENABLE_BUTTON = True
+    # Enable if you have an IR sensor to wake the screen, and if input is reversed (some sensors)
+    ENABLE_IR_SENSOR = True
+    IR_SENSOR_REVERSE_INPUT = False
 
     # The name this station should be reporting metrics as
     WEATHER_LOCATION = ""
@@ -30,6 +36,7 @@ class Config:
     GPIO_PIN_DISPLAY_SDA = 4
     GPIO_PIN_DISPLAY_SCL = 5
     GPIO_PIN_BUTTON = 22
+    GPIO_PIN_IR_SENSOR = 20
 
     DISPLAY_WIDTH  = 128
     DISPLAY_HEIGHT = 64
@@ -38,7 +45,3 @@ class Config:
     # "pico" for a Pico W (recommended)
     # "esp" for an ESP01 (ESP8266). Support for ESP01 is buggy and not really worth it.
     NETWORK_CHIP = "pico"
-
-    # Not really configs, should be moved
-    ERROR_WIFI = "WIFI ERR"
-    ERROR_GATEWAY = "GTW ERR"

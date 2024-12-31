@@ -3,6 +3,7 @@ from ssd1306 import SSD1306_I2C
 from font import FontWriter, Orientation
 from runLoop import Operation, Events, EventArgs
 from config import Config
+import time
 
 class ViewModel:
     datetime = None
@@ -16,17 +17,18 @@ class Screen(Operation):
     display = None
     fontWriter = None
     orientation = Orientation.LANDSCAPE
-    displayOn = True
+    displayTurnedOnAt = None
 
     def __init__(self, logger, orientation=Orientation.LANDSCAPE):
         super().__init__("screen", scheduled=True, tickIntervalMs=5000)
-        self.i2c = I2C(0, scl=Pin(Config.GPIO_PIN_DISPLAY_SCL),
+        self.i2c = I2C(0,
+                       scl=Pin(Config.GPIO_PIN_DISPLAY_SCL),
                        sda=Pin(Config.GPIO_PIN_DISPLAY_SDA),
                        freq=200000)
         self.display = SSD1306_I2C(Config.DISPLAY_WIDTH,
                                    Config.DISPLAY_HEIGHT,
                                    self.i2c)
-        self.display.poweron()
+        self.displayOn()
         self.display.contrast(0x00)
         self.fontWriter = FontWriter(self.display, orientation)
         self.orientation = orientation
@@ -47,13 +49,21 @@ class Screen(Operation):
         elif event is Events.UPDATE_TIME:
             self.model.datetime = args[EventArgs.TIME].datetime()
             self.update()
+        elif event is Events.IR_SENSOR_TRIGGERED:
+            self.displayOn()
         elif event is Events.BUTTON_PRESSED:
-            if self.displayOn:
-                self.display.poweroff()
-                self.displayOn = False
+            if self.displayTurnedOnAt is not None:
+                self.displayOff()
             else:
-                self.display.poweron()
-                self.displayOn = True
+                self.displayOn()
+
+    def displayOn(self):
+        self.display.poweron()
+        self.displayTurnedOnAt = time.ticks_ms()
+
+    def displayOff(self):
+        self.display.poweroff()
+        self.displayTurnedOnAt = None
 
     def update(self):
         self.logger.debug("Update Screen with model: {}", self.model)
@@ -72,4 +82,10 @@ class Screen(Operation):
             self.fontWriter.write(humidityText, 20, 0, 63)
 
         self.display.show()
- 
+
+        if Config.ENABLE_SCREEN_SLEEP:
+            if self.displayTurnedOnAt is not None:
+                screenTime = time.ticks_diff(time.ticks_ms(), self.displayTurnedOnAt)
+                self.logger.debug("SCREEN MEASURE: {}", screenTime)
+                if screenTime > Config.SCREEN_SLEEP_TIMEOUT_MS:
+                    self.displayOff()
