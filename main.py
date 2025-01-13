@@ -21,7 +21,7 @@ class Application:
         self.logManager = LogManager()
         self.logger = self.logManager.logger
         self.networkManager = self.createNetworkManager(self.logger)
-        self.runLoop = RunLoop(1000, logger=self.logger)
+        self.runLoop = RunLoop(1000, logger=self.logger, enableWatchdog=Config.ENABLE_WATCHDOG)
         self.runLoop.add(self.logManager)
         self.runLoop.add(ApplicationEventHandler(self.logger))
         self.runLoop.add(CallbackOperation("wifi", 15_000, self.checkWifi))

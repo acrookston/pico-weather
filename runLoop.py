@@ -1,4 +1,5 @@
 import time
+from machine import WDT
 
 class Events:
     UPDATE_SCREEN = 0
@@ -45,10 +46,12 @@ class RunLoop:
     operations = []
     running = False
     sleepIntervalMs = 5000
+    enableWatchdog = True
 
-    def __init__(self, sleepIntervalMs=5000, logger=None):
+    def __init__(self, sleepIntervalMs=5000, logger=None, enableWatchdog=True):
         self.sleepIntervalMs = sleepIntervalMs
         self.logger = logger
+        self.enableWatchdog = enableWatchdog
 
     def add(self, operation):
         self.operations.append(operation)
@@ -79,7 +82,10 @@ class RunLoop:
 
     def start(self):
         self.running = True
+        if self.enableWatchdog:
+            wdt = WDT(timeout=8388)
         while self.running:
+            wdt.feed()
             tickStart = time.ticks_ms()
             self.runOperations()
             executionTime = time.ticks_diff(time.ticks_ms(), tickStart)

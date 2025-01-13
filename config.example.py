@@ -41,6 +41,9 @@ class Config:
     DISPLAY_WIDTH  = 128
     DISPLAY_HEIGHT = 64
 
+    # Enable the chip's watchdog function which autorestarts. Should be on except when debugging.
+    ENABLE_WATCHDOG = True
+
     # Which network chip you are using?
     # "pico" for a Pico W (recommended)
     # "esp" for an ESP01 (ESP8266). Support for ESP01 is buggy and not really worth it.
