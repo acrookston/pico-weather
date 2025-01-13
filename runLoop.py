@@ -7,6 +7,7 @@ class Events:
     POST_METRICS = 3
     BUTTON_PRESSED = 4
     BUTTON_LONG_PRESSED = 5
+    IR_SENSOR_TRIGGERED = 6
 
 class EventArgs:
     TEMPERATURE = "temperature"
@@ -65,7 +66,6 @@ class RunLoop:
                 operation.handleEvent(self, event, args=args)
             except Exception as error:
                 self.logger.exc(error, "Error handling event {} in {}", event, operation.identifier)
-
 
     def runOperations(self):
         for ix in range(len(self.operations)):

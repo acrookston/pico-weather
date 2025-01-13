@@ -7,6 +7,7 @@ from picoNetworkManager import PicoNetworkManager
 from metricsUploader import MetricsUploader
 from weather import WeatherChecker, WeatherLogger
 from buttonManager import ButtonManager
+from irSensorManager import IRSensorManager
 from applicationEventHandler import ApplicationEventHandler
 from esp8266 import ESP8266
 from config import Config
@@ -28,6 +29,8 @@ class Application:
         self.runLoop.add(MetricsUploader(self.logger, self.networkManager))
         self.runLoop.add(WeatherLogger(self.logger))
         self.runLoop.add(WeatherChecker(self.logger))
+        if Config.ENABLE_IR_SENSOR:
+            self.runLoop.add(IRSensorManager(self.logger))
         if Config.ENABLE_SCREEN:
             self.runLoop.add(Screen(logger=self.logger, orientation=Orientation.PORTRAIT))
         if Config.ENABLE_BUTTON:
@@ -42,7 +45,7 @@ class Application:
     def start(self):
         try:
             self.runLoop.start()
-        except Exception as error:
+        except (Exception, OSError) as error:
             self.logManager.purgeLogFiles()
             self.logger.exc(error, "Application exception")
             self.logger.warning("Restarting machine")
