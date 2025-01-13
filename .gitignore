@@ -2,3 +2,6 @@ old
 *.log
 config.py
 files
+lib
+bin
+PicoWeather

@@ -3,10 +3,11 @@
 device=''
 
 fn_backup () {
+  mkdir -p backup
   for n in $(cat files.txt)
   do
     echo "Working on $n"
-    mpremote connect $device cp :$n .
+    mpremote connect $device cp :$n backup/$n
   done
 }
 
@@ -38,9 +39,9 @@ fn_get_logs () {
 }
 
 fn_rm_logs () {
-  echo "Fetching application.log"
+  echo "Deleting application.log"
   mpremote connect $device fs rm application.log
-  echo "Fetching error.log"
+  echo "Deleting error.log"
   mpremote connect $device fs rm error.log
 }
 
